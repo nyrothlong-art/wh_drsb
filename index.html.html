@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="km" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="browser-tab-title">Stock Inventory Ultimate Pro</title>
+  
+  <link id="dynamic-favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306b6d4'><path d='M21 16.5l-9 5.25-9-5.25V7.5l9-5.25 9 5.25v9z'/></svg>">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 500: '#06b6d4', 600: '#0891b2' }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Stable CDNs -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+    * {
+      font-family: 'Kantumruy Pro', 'Plus Jakarta Sans', sans-serif;
+    }
+    .laser-line-anim {
+      position: absolute;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent 0%, #06b6d4 50%, transparent 100%);
+      box-shadow: 0 0 16px #0891b2, 0 0 8px #22d3ee;
+      animation: scanLaser 2s infinite ease-in-out;
+    }
+    @keyframes scanLaser {
+      0% { top: 6%; opacity: 0.2; }
+      50% { top: 92%; opacity: 1; }
+      100% { top: 6%; opacity: 0.2; }
+    }
+    .logo-animated {
+      animation: logoFloat 4s ease-in-out infinite alternate, logoPulseGlow 3s ease-in-out infinite;
+    }
+    @keyframes logoFloat {
+      0% { transform: translateY(0px) rotate(0deg); }
+      100% { transform: translateY(-4px) rotate(2deg); }
+    }
+    @keyframes logoPulseGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
+      50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.8), 0 0 10px rgba(99, 102, 241, 0.5); }
+    }
+    .modal-pop {
+      animation: modalPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    @keyframes modalPopIn {
+      0% { opacity: 0; transform: scale(0.85) translateY(20px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .shake-anim {
+      animation: shake 0.45s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-2px, 0, 0); }
+      20%, 80% { transform: translate3d(4px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+      40%, 60% { transform: translate3d(6px, 0, 0); }
+    }
+    .dark .glass-box {
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(16px);
+      border-color: rgba(51, 65, 85, 0.8);
+    }
+    .light .glass-box {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(16px);
+      border-color: rgba(226, 232, 240, 1);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+    #reader video, #audit-reader video {
+      border-radius: 1rem;
+      object-fit: cover;
+      width: 100% !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 dark:bg-[#070b14] dark:text-slate-100 min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-white">
+
+  <div id="toast-wrapper" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none"></div>
+
+  <!-- LOGIN MODAL -->
+  <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-2xl p-4 transition-all duration-300">
+    <div id="login-card-container" class="glass-box border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl relative modal-pop">
+      <div class="text-center mb-6">
+        <div id="login-logo-box" class="w-16 h-16 bg-gradient-to-tr from-cyan-600 to-blue-600 rounded-2xl mx-auto flex items-center justify-center text-white mb-3 shadow-lg shadow-cyan-500/25 logo-animated">
+          <i data-lucide="boxes" class="w-8 h-8"></i>
+        </div>
+        <h2 id="login-app-title" class="text-2xl font-bold tracking-wide">Stock Inventory</h2>
+        <p class="text-xs text-slate-400 mt-1">សូមបញ្ចូលគណនីដើម្បីចូលប្រើប្រាស់</p>
+      </div>
+
+      <div id="login-error-banner" class="hidden mb-4 p-3 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-xs text-rose-300 flex items-center space-x-2">
+        <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 text-rose-400"></i>
+        <span id="login-error-text">ឈ្មោះអ្នកប្រើប្រាស់ ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ!</span>
+      </div>
+
+      <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">ឈ្មោះអ្នកប្រើប្រាស់ (Username)</label>
+          <input type="text" id="input-username" required placeholder="admin" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">ពាក្យសម្ងាត់ (Password)</label>
+          <input type="password" id="input-password" required placeholder="8888" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        </div>
+
+        <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-3 rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
+          <span>ចូលប្រព័ន្ធ (Login)</span>
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- NAVIGATION -->
+  <header class="bg-slate-900/90 border-b border-slate-800 backdrop-blur-xl sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-cyan-600 flex items-center justify-center text-white logo-animated">
+          <i data-lucide="boxes" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 id="app-title-display" class="text-base font-bold tracking-wide">Stock Inventory</h1>
+          <span class="text-[10px] text-emerald-400 font-mono flex items-center space-x-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>SYSTEM ONLINE</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <nav class="flex bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+          <button id="nav-btn-inventory" onclick="switchNavTab('inventory')" class="px-3 py-1.5 rounded-lg bg-cyan-600 text-white">ស្តុកទំនិញ</button>
+          <button id="nav-btn-audit" onclick="switchNavTab('audit')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">រាប់ស្តុក</button>
+          <button id="nav-btn-settings" onclick="switchNavTab('settings')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hidden">Settings</button>
+        </nav>
+
+        <div class="text-right hidden sm:block">
+          <p id="nav-username" class="text-xs font-semibold">Admin</p>
+          <span id="nav-userrole" class="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-mono">ADMIN</span>
+        </div>
+
+        <button onclick="handleLogout()" class="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN INVENTORY -->
+  <main id="tab-inventory" class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="glass-box border rounded-2xl p-4">
+        <p class="text-[11px] text-slate-400">ទំនិញសរុប</p>
+        <h3 id="stat-total" class="text-lg font-bold font-mono">0</h3>
+      </div>
+      <div class="glass-box border rounded-2xl p-4">
+        <p class="text-[11px] text-emerald-400">មិនទាន់បើក (In Stock)</p>
+        <h3 id="stat-unopened" class="text-lg font-bold text-emerald-400 font-mono">0</h3>
+      </div>
+      <div class="glass-box border rounded-2xl p-4">
+        <p class="text-[11px] text-amber-400">បានបើករួច (Opened)</p>
+        <h3 id="stat-opened" class="text-lg font-bold text-amber-400 font-mono">0</h3>
+      </div>
+      <div class="glass-box border rounded-2xl p-4">
+        <p class="text-[11px] text-purple-400">អត្រាស្តុកសេសសល់</p>
+        <h3 id="stat-rate" class="text-lg font-bold text-purple-400 font-mono">0%</h3>
+      </div>
+    </div>
+
+    <!-- Scanner & List -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-5 space-y-4">
+        <div class="glass-box border rounded-3xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-sm">ម៉ាស៊ីនស្កេន</h2>
+            <div class="flex bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+              <button id="btn-mode-in" onclick="changeMode('IN')" class="px-3 py-1.5 rounded-lg bg-cyan-600 text-white">ស្កេនចូល</button>
+              <button id="btn-mode-out" onclick="changeMode('OUT')" class="px-3 py-1.5 rounded-lg text-slate-400">ស្កេនបើក</button>
+            </div>
+          </div>
+
+          <div class="relative bg-black rounded-2xl overflow-hidden min-h-[250px] border border-slate-800 flex items-center justify-center">
+            <div id="reader" class="w-full"></div>
+            <div id="laser-line" class="laser-line-anim hidden"></div>
+            <div id="camera-idle" class="text-center p-6 space-y-2">
+              <i data-lucide="camera-off" class="w-8 h-8 text-slate-600 mx-auto"></i>
+              <p class="text-xs text-slate-500">កាមេរ៉ាមិនទាន់ដំណើរការ</p>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button id="btn-cam-start" onclick="startScannerCamera()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl font-medium text-xs">បើកកាមេរ៉ា</button>
+            <button id="btn-cam-stop" onclick="stopScannerCamera()" class="hidden flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl font-medium text-xs">បិទកាមេរ៉ា</button>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800">
+            <label class="block text-xs text-slate-400 mb-1">វាយលេខ Tracking ដោយដៃ៖</label>
+            <div class="flex gap-2">
+              <input type="text" id="scan-manual-tracking-input" placeholder="បញ្ចូលលេខកូដ..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
+              <button onclick="handleScanManualSubmit()" class="bg-cyan-600 text-white px-4 py-2 rounded-xl text-xs font-semibold">អនុវត្ត</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7">
+        <div class="glass-box border rounded-3xl overflow-hidden flex flex-col h-full">
+          <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <h2 class="font-bold text-sm">បញ្ជីស្តុកជាក់ស្តែង</h2>
+            <button onclick="exportToExcel()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold">Export Excel</button>
+          </div>
+          <div class="overflow-x-auto flex-1 max-h-[450px] overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900 text-slate-400 uppercase border-b border-slate-800">
+                <tr>
+                  <th class="px-4 py-3">រូបភាព</th>
+                  <th class="px-4 py-3">Tracking</th>
+                  <th class="px-4 py-3">ស្ថានភាព</th>
+                  <th class="px-4 py-3">អ្នកបញ្ចូល</th>
+                  <th class="px-4 py-3 text-right">សកម្មភាព</th>
+                </tr>
+              </thead>
+              <tbody id="inventory-tbody" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- TAB AUDIT -->
+  <main id="tab-audit" class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full hidden space-y-6">
+    <div class="glass-box border rounded-3xl p-5">
+      <h2 class="text-base font-bold mb-4">រាប់ស្តុកជាក់ស្តែង (Stock Audit)</h2>
+      <div class="flex gap-2 mb-4">
+        <input type="text" id="audit-manual-input" placeholder="ស្កេន ឬវាយកូដផ្ទៀងផ្ទាត់..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white">
+        <button onclick="handleAuditSubmit()" class="bg-emerald-600 text-white px-5 py-2 rounded-xl text-xs font-semibold">ផ្ទៀងផ្ទាត់</button>
+      </div>
+      <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="px-4 py-2.5">Tracking</th>
+              <th class="px-4 py-2.5">ស្ថានភាព</th>
+              <th class="px-4 py-2.5">ម៉ោង</th>
+            </tr>
+          </thead>
+          <tbody id="audit-tbody" class="divide-y divide-slate-800"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <canvas id="hidden-canvas" class="hidden"></canvas>
+
+  <script>
+    // CORE APPLICATION STATE
+    let activeMode = 'IN';
+    let inventoryData = JSON.parse(localStorage.getItem('stock_items_fixed') || '[]');
+    let sessionUser = JSON.parse(sessionStorage.getItem('session_user_fixed') || 'null');
+    let auditList = [];
+    let html5QrCode = null;
+    let isCooldown = false;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      checkAuth();
+      renderTable();
+      updateStats();
+    });
+
+    function checkAuth() {
+      const modal = document.getElementById('login-modal');
+      const settingsBtn = document.getElementById('nav-btn-settings');
+      if (!sessionUser) {
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+        document.getElementById('nav-username').innerText = sessionUser.name;
+        document.getElementById('nav-userrole').innerText = sessionUser.role;
+        if (sessionUser.role === 'Admin') settingsBtn.classList.remove('hidden');
+      }
+    }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('input-username').value.trim();
+      const p = document.getElementById('input-password').value.trim();
+      const errorBanner = document.getElementById('login-error-banner');
+      const card = document.getElementById('login-card-container');
+
+      if (u.toLowerCase() === 'admin' && p === '8888') {
+        sessionUser = { name: 'អ្នកគ្រប់គ្រង (Admin)', role: 'Admin' };
+        sessionStorage.setItem('session_user_fixed', JSON.stringify(sessionUser));
+        checkAuth();
+        showToast('សូមស្វាគមន៍ Admin!', 'success');
+      } else {
+        errorBanner.classList.remove('hidden');
+        card.classList.remove('shake-anim');
+        void card.offsetWidth;
+        card.classList.add('shake-anim');
+      }
+    }
+
+    function handleLogout() {
+      sessionUser = null;
+      sessionStorage.removeItem('session_user_fixed');
+      stopScannerCamera();
+      location.reload();
+    }
+
+    function switchNavTab(tab) {
+      document.getElementById('tab-inventory').classList.add('hidden');
+      document.getElementById('tab-audit').classList.add('hidden');
+      document.getElementById('nav-btn-inventory').className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-white";
+      document.getElementById('nav-btn-audit').className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-white";
+
+      if (tab === 'inventory') {
+        document.getElementById('tab-inventory').classList.remove('hidden');
+        document.getElementById('nav-btn-inventory').className = "px-3 py-1.5 rounded-lg bg-cyan-600 text-white";
+      } else {
+        document.getElementById('tab-audit').classList.remove('hidden');
+        document.getElementById('nav-btn-audit').className = "px-3 py-1.5 rounded-lg bg-cyan-600 text-white";
+      }
+      lucide.createIcons();
+    }
+
+    function changeMode(mode) {
+      activeMode = mode;
+      if (mode === 'IN') {
+        document.getElementById('btn-mode-in').className = "px-3 py-1.5 rounded-lg bg-cyan-600 text-white";
+        document.getElementById('btn-mode-out').className = "px-3 py-1.5 rounded-lg text-slate-400";
+      } else {
+        document.getElementById('btn-mode-out').className = "px-3 py-1.5 rounded-lg bg-emerald-600 text-white";
+        document.getElementById('btn-mode-in').className = "px-3 py-1.5 rounded-lg text-slate-400";
+      }
+    }
+
+    function startScannerCamera() {
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        alert('សូមដំណើរការលើ HTTPS (ដូចជា Netlify ឬ Localhost) ទើបអាចបើកកាមេរ៉ាស្កេនបាន!');
+      }
+      html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 15, qrbox: { width: 220, height: 220 } },
+        (decodedText) => handleScanAction(decodedText)
+      ).then(() => {
+        document.getElementById('btn-cam-start').classList.add('hidden');
+        document.getElementById('btn-cam-stop').classList.remove('hidden');
+        document.getElementById('camera-idle').classList.add('hidden');
+        document.getElementById('laser-line').classList.remove('hidden');
+      }).catch(err => {
+        showToast('មិនអាចបើកកាមេរ៉ាបានទេ: ' + err, 'error');
+      });
+    }
+
+    function stopScannerCamera() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          document.getElementById('btn-cam-start').classList.remove('hidden');
+          document.getElementById('btn-cam-stop').classList.add('hidden');
+          document.getElementById('camera-idle').classList.remove('hidden');
+          document.getElementById('laser-line').classList.add('hidden');
+        }).catch(e => console.error(e));
+      }
+    }
+
+    function handleScanManualSubmit() {
+      const code = document.getElementById('scan-manual-tracking-input').value.trim();
+      if (!code) return;
+      handleScanAction(code);
+      document.getElementById('scan-manual-tracking-input').value = '';
+    }
+
+    function handleScanAction(code) {
+      if (isCooldown) return;
+      isCooldown = true;
+
+      if (activeMode === 'IN') {
+        const exist = inventoryData.find(i => i.barcode === code);
+        if (exist) {
+          showToast(`ទំនិញ [${code}] មានក្នុងស្តុករួចហើយ!`, 'warning');
+        } else {
+          inventoryData.unshift({
+            barcode: code,
+            status: 'In Stock',
+            photo: 'https://placehold.co/100x100/1e293b/white?text=Snap',
+            date: new Date().toLocaleString('km-KH'),
+            operator: sessionUser?.name || 'Admin'
+          });
+          localStorage.setItem('stock_items_fixed', JSON.stringify(inventoryData));
+          renderTable();
+          updateStats();
+          showToast(`បានបញ្ចូលស្តុក៖ ${code}`, 'success');
+        }
+      } else {
+        const item = inventoryData.find(i => i.barcode === code);
+        if (!item) {
+          showToast(`រកមិនឃើញកូដ [${code}] ក្នុងស្តុកទេ!`, 'error');
+        } else if (item.status === 'Opened') {
+          showToast(`ទំនិញ [${code}] បើករួចហើយ!`, 'warning');
+        } else {
+          item.status = 'Opened';
+          localStorage.setItem('stock_items_fixed', JSON.stringify(inventoryData));
+          renderTable();
+          updateStats();
+          showToast(`បានបើកទំនិញ៖ ${code}`, 'success');
+        }
+      }
+
+      setTimeout(() => { isCooldown = false; }, 1500);
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('inventory-tbody');
+      tbody.innerHTML = '';
+      inventoryData.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40";
+        tr.innerHTML = `
+          <td class="px-4 py-3"><img src="${item.photo}" class="w-10 h-10 object-cover rounded-lg border border-slate-700"></td>
+          <td class="px-4 py-3 font-mono font-bold text-cyan-400">${item.barcode}</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-[10px] ${item.status === 'Opened' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}">${item.status}</span></td>
+          <td class="px-4 py-3 text-slate-400">${item.operator}</td>
+          <td class="px-4 py-3 text-right">
+            <button onclick="deleteItem('${item.barcode}')" class="text-rose-400 hover:text-rose-300">លុប</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      lucide.createIcons();
+    }
+
+    function deleteItem(code) {
+      if (confirm(`តើអ្នកចង់លុបទំនិញ ${code} មែនទេ?`)) {
+        inventoryData = inventoryData.filter(i => i.barcode !== code);
+        localStorage.setItem('stock_items_fixed', JSON.stringify(inventoryData));
+        renderTable();
+        updateStats();
+        showToast('បានលុបទំនិញជោគជ័យ!', 'info');
+      }
+    }
+
+    function updateStats() {
+      const total = inventoryData.length;
+      const unopened = inventoryData.filter(i => i.status === 'In Stock').length;
+      const opened = inventoryData.filter(i => i.status === 'Opened').length;
+      const rate = total > 0 ? Math.round((unopened / total) * 100) : 0;
+
+      document.getElementById('stat-total').innerText = total;
+      document.getElementById('stat-unopened').innerText = unopened;
+      document.getElementById('stat-opened').innerText = opened;
+      document.getElementById('stat-rate').innerText = `${rate}%`;
+    }
+
+    function handleAuditSubmit() {
+      const code = document.getElementById('audit-manual-input').value.trim();
+      if (!code) return;
+      const exist = inventoryData.find(i => i.barcode === code);
+      const tbody = document.getElementById('audit-tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="px-4 py-2 font-mono font-bold text-cyan-400">${code}</td>
+        <td class="px-4 py-2">${exist ? `<span class="text-emerald-400">ត្រឹមត្រូវ (${exist.status})</span>` : `<span class="text-rose-400">គ្មានក្នុងប្រព័ន្ធ</span>`}</td>
+        <td class="px-4 py-2 text-slate-400">${new Date().toLocaleTimeString()}</td>
+      `;
+      tbody.prepend(tr);
+      document.getElementById('audit-manual-input').value = '';
+    }
+
+    function exportToExcel() {
+      if (inventoryData.length === 0) return alert('គ្មានទិន្នន័យដើម្បី Export ទេ!');
+      const ws = XLSX.utils.json_to_sheet(inventoryData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Stock");
+      XLSX.writeFile(wb, "Stock_Data.xlsx");
+    }
+
+    function showToast(msg, type = 'info') {
+      const wrapper = document.getElementById('toast-wrapper');
+      const toast = document.createElement('div');
+      toast.className = `p-3 rounded-2xl border text-xs shadow-xl pointer-events-auto bg-slate-900 border-slate-700 text-slate-200`;
+      toast.innerText = msg;
+      wrapper.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+  </script>
+</body>
+</html>
